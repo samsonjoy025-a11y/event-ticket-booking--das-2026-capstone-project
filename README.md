@@ -60,3 +60,21 @@ You will add at least one entry in every build. It counts toward your grade.
 - Never commit secrets, passwords or `.env` files.
 - Money is stored as whole numbers of the smallest unit (kobo or cents), never as decimals.
 - You are responsible for every line of your project, including the lines the AI wrote.
+
+## Build 1: Domain Core
+
+The current implementation provides an in-memory event service, ticket inventory service, booking service, and linked-list waitlist. It runs in the terminal and has no HTTP server, database, frontend, or external packages.
+
+Requirements: Node.js 22.13 or newer.
+
+```sh
+npm test
+npm run demo
+npm run benchmark
+```
+
+The demo creates and publishes an event, sells out its ticket tier, rejects an additional booking, adds attendees to the FIFO waitlist, cancels a booking, releases its inventory once, and displays the next attendee. The waitlist attendee remains queued; timed offers are part of a later build.
+
+Booking amounts are stored as integer minor units with an explicit currency code. Bookings are pending because payment is not implemented. Cancellation releases inventory but does not calculate refunds. The benchmark compares `Array.find()` and `Map.get()`; its timings are environment-dependent.
+
+See [docs/architecture.md](docs/architecture.md), [docs/service-boundaries.md](docs/service-boundaries.md), [docs/security-design.md](docs/security-design.md), and [docs/ai-log.md](docs/ai-log.md) for design and current limitations.
