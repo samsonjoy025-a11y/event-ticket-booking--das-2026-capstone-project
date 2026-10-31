@@ -41,3 +41,20 @@ test('rejects invalid event fields and invalid state transitions', () => {
   assert.throws(() => service.publishEvent(event.id), (error) => error.code === ERROR_CODES.INVALID_STATE);
   assert.throws(() => service.getEvent('event_missing'), (error) => error.code === ERROR_CODES.NOT_FOUND);
 });
+
+test('lists only published event snapshots and removes unpublished events from discovery', () => {
+  const service = createEventService();
+  const visible = service.createEvent(validEvent);
+  const hidden = service.createEvent({ ...validEvent, title: 'Private Draft' });
+
+  service.publishEvent(visible.id);
+  assert.deepEqual(service.listPublishedEvents().map((event) => event.id), [visible.id]);
+
+  const listed = service.listPublishedEvents();
+  listed[0].ticketTierIds.push('outside_mutation');
+  assert.deepEqual(service.getEvent(visible.id).ticketTierIds, []);
+
+  assert.equal(service.unpublishEvent(visible.id).status, 'draft');
+  assert.deepEqual(service.listPublishedEvents(), []);
+  assert.throws(() => service.unpublishEvent(hidden.id), (error) => error.code === ERROR_CODES.INVALID_STATE);
+});

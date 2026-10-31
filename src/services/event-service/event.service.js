@@ -55,8 +55,25 @@ export function createEventService({ idGenerator = createSecureId, clock = () =>
       return copyEvent(published);
     },
 
+    unpublishEvent(eventId) {
+      const event = getStoredEvent(eventId);
+      if (event.status !== 'published') {
+        throw new AppError(ERROR_CODES.INVALID_STATE, 'Only published events can be unpublished.');
+      }
+
+      const draft = { ...event, status: 'draft' };
+      events.set(event.id, draft);
+      return copyEvent(draft);
+    },
+
     getEvent(eventId) {
       return copyEvent(getStoredEvent(eventId));
+    },
+
+    listPublishedEvents() {
+      return [...events.values()]
+        .filter((event) => event.status === 'published')
+        .map(copyEvent);
     },
 
     associateTicketTier(eventId, ticketTierId) {

@@ -9,6 +9,6 @@
   "scripts": {
     "test": "node --test",
     "demo": "node demo/demo.js",
-    "benchmark": "node benchmark/booking-lookup.benchmark.js"
+    "benchmark": "node benchmark/booking-lookup.benchmark.js && node benchmark/discovery.benchmark.js"
   }
 }
