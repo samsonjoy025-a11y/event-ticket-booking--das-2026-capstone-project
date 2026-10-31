@@ -27,3 +27,11 @@ Each service owns its Maps and returns copies of records. Ticket inventory can o
 ## Future Security Work
 
 Later builds should add authenticated identities and role/ownership authorization, durable unique constraints, atomic inventory updates and cancellation, transport security, request rate and size limits, structured redacted audit events, secret management, dependency and runtime update procedures, and security tests for unauthorized access and concurrent operations. Security controls must be revisited when an API, database, or external integration is introduced.
+
+## Build 2 Discovery Controls
+
+Discovery accepts only an allowlist of query options and validates strings, UTC date boundaries, integer minor-unit ranges, currency codes, availability flags, and sort fields/directions before reading service data. Search uses literal case-insensitive substring checks; it does not build dynamic code or database queries. Results are projected from the documented event fields, and unpublished events are excluded even if a dependency unexpectedly includes one.
+
+Price comparisons always include a validated currency and never convert or compare different currencies. Ticket Service errors and malformed batch responses become a sanitized `DEPENDENCY_UNAVAILABLE` error. A ticket-dependent query returns no partial results and does not substitute zero for missing prices or availability. Event-only searches do not call Ticket Service. No attendee identity is needed or logged by discovery; authentication and authorization remain out of scope.
+
+Dates are compared as UTC instants. Date-only boundaries mean midnight UTC for the start and the last millisecond of that UTC day for the end; timestamp inputs require an explicit timezone offset. Locale-specific display formatting belongs to a future presentation layer.

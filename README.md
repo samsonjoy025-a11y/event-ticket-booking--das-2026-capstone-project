@@ -78,3 +78,26 @@ The demo creates and publishes an event, sells out its ticket tier, rejects an a
 Booking amounts are stored as integer minor units with an explicit currency code. Bookings are pending because payment is not implemented. Cancellation releases inventory but does not calculate refunds. The benchmark compares `Array.find()` and `Map.get()`; its timings are environment-dependent.
 
 See [docs/architecture.md](docs/architecture.md), [docs/service-boundaries.md](docs/service-boundaries.md), [docs/security-design.md](docs/security-design.md), and [docs/ai-log.md](docs/ai-log.md) for design and current limitations.
+
+## Build 2: Event Discovery
+
+Build 2 adds a separate Event Discovery Service for published-event text search, city and UTC date filtering, currency-safe price and availability filtering, and stable sorting. Search uses only the existing title, city, and venue fields. Discovery reads events and current ticket information through the Event and Ticket service public interfaces.
+
+```js
+app.discovery.discoverEvents({
+	query: 'technology',
+	city: 'Lagos',
+	startDate: '2030-05-01',
+	endDate: '2030-05-31',
+	minPriceMinor: 500000,
+	maxPriceMinor: 5000000,
+	currency: 'NGN',
+	availableOnly: true,
+	sortBy: 'price',
+	sortDirection: 'asc',
+});
+```
+
+Price boundaries are inclusive. Price filters require a currency and compare only tiers in that currency; the event price is its lowest-priced tier with current availability. Availability is the sum of current available quantities across all tiers, regardless of currency. Date-only end boundaries include the full UTC day; timestamps must include an explicit timezone. Unavailable price data sorts after known prices, never as zero. See [docs/algorithm-analysis.md](docs/algorithm-analysis.md) for complexity and benchmark details.
+
+`npm run benchmark` runs both the Build 1 booking lookup benchmark and the Build 2 discovery benchmark. Results are measurements for the current runtime and are not proof of Big O complexity.

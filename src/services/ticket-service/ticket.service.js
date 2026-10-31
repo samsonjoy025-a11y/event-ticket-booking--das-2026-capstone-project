@@ -55,6 +55,31 @@ export function createTicketService({ events, idGenerator = createSecureId } = {
       return copyTier(getStoredTier(ticketTierId));
     },
 
+    getTicketTiersForEvents(eventIds) {
+      if (!Array.isArray(eventIds)) {
+        throw new AppError(ERROR_CODES.VALIDATION, 'eventIds must be an array.');
+      }
+
+      const groupedTiers = new Map();
+      for (const eventId of eventIds) {
+        const id = assertIdentifier(eventId, 'eventId');
+        if (groupedTiers.has(id)) {
+          throw new AppError(ERROR_CODES.VALIDATION, 'eventIds must not contain duplicates.');
+        }
+        groupedTiers.set(id, []);
+      }
+
+      for (const tier of tiers.values()) {
+        const eventTiers = groupedTiers.get(tier.eventId);
+        if (eventTiers) eventTiers.push(copyTier(tier));
+      }
+
+      return eventIds.map((eventId) => ({
+        eventId,
+        ticketTiers: groupedTiers.get(eventId),
+      }));
+    },
+
     getAvailableQuantity(ticketTierId) {
       const tier = getStoredTier(ticketTierId);
       return tier.capacity - tier.reservedQuantity;

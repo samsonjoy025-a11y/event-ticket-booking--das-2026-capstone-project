@@ -29,3 +29,19 @@ Public interface: `addAttendee(input)`, `removeNextAttendee(ticketTierId)`, `pee
 ## Shared Modules
 
 `src/shared/validation/validate.js` provides field-level checks; domain-specific rules remain inside each service. `src/shared/money/money.js` uses safe integer minor units and explicit three-letter currency codes. `src/shared/security/secure-id.js` generates IDs and booking references using Node cryptographic randomness. `src/shared/errors/` defines stable error codes and public messages. `src/application/bootstrap.js` wires dependencies but contains no business rules.
+
+## Event Service Additions (Build 2)
+
+`listPublishedEvents()` returns copies of published event snapshots only. `unpublishEvent(eventId)` transitions a published event back to draft; invalid transitions return `INVALID_STATE`. The service retains ownership of publication state and does not implement search.
+
+## Ticket Service Additions (Build 2)
+
+`getTicketTiersForEvents(eventIds)` returns current tier snapshots grouped by the requested event IDs, including empty groups for events with no tiers. Each snapshot contains current `availableQuantity`, not internal reserved state. The read is batched and read-only; ticket inventory mutation remains restricted to reserve/release operations.
+
+## Event Discovery Service (Build 2)
+
+Owns discovery input validation, text search over title/city/venue, city and date filtering, currency-aware price filtering, availability filtering, and stable sorting.
+
+Public interface: `discoverEvents(options)`. Options include `query`, `city`, `startDate`, `endDate`, `minPriceMinor`, `maxPriceMinor`, `currency`, `availableOnly`, `sortBy` (`date`, `price`, or `availability`), and `sortDirection` (`asc` or `desc`). It calls Event Service first, then calls Ticket Service once in batch only when price/availability criteria or sorting require ticket data. If a required dependency fails or returns inconsistent tier information, it returns `DEPENDENCY_UNAVAILABLE` rather than partial or fabricated results.
+
+Price comparison uses the lowest-priced currently available tier for the requested currency; no currency conversion is attempted. Availability is the sum of available quantities across all tiers. Date-only boundaries are interpreted in UTC, timestamps require an explicit offset, and both boundaries are inclusive. Stable sort ties retain the event service's source order. Search-only and event-date-only requests remain independent of ticket data.

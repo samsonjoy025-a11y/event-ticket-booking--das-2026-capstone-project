@@ -1,6 +1,6 @@
 # Product Backlog: User Stories
 
-Each Build is one sprint. The "Build" column says which build finishes the story end to end (rules, API and screen where it applies). Several stories are touched in more than one build.
+Each Build is one sprint. The "Build" column says which build finishes the story end to end (rules, API and screen where it applies). Several stories are touched in more than one build. Build 2 implements domain-level event discovery and automated tests; API, frontend, persistence, authentication and CI delivery remain assigned to later Builds.
 
 ## Roles
 
@@ -12,7 +12,7 @@ Each Build is one sprint. The "Build" column says which build finishes the story
 
 ## Backlog
 
-| ID | As a... | I want to... | So that... | Priority | Build |
+| ID | Role | User requirement | Business value | Priority | Build |
 |---|---|---|---|---|---|
 | S01 | visitor | sign up and log in | my bookings are private | Must | 7 |
 | S02 | organizer | create an event with title, city, venue and date | people can find it | Must | 2 (rules), 4 (API), 7 (screen) |
@@ -33,7 +33,38 @@ Each Build is one sprint. The "Build" column says which build finishes the story
 
 **Stretch:** organizer sales dashboard, per-seat tickets, promo codes, waitlist notifications, partial refunds, organizer cancels the whole event.
 
-## Acceptance criteria for the stories that matter most
+## Build 2 Acceptance Criteria
+
+### S02: Create an event
+
+- **Given** valid title, city, venue and date values **When** an organizer creates an event **Then** the Event Service stores a draft event with those values and a unique identifier.
+- **Given** a missing or invalid required field **When** an organizer creates an event **Then** creation is rejected with `VALIDATION` and no event is added.
+
+### S03: Create ticket tiers
+
+- **Given** an existing event and a valid tier name, non-negative integer minor-unit price, three-letter currency and positive integer capacity **When** an organizer creates a tier **Then** the tier is associated with that event and starts with its full capacity available.
+- **Given** a negative or fractional price, invalid currency, or non-positive/fractional capacity **When** an organizer creates a tier **Then** it is rejected and no tier association is added.
+
+### S04: Publish and unpublish an event
+
+- **Given** a draft event **When** an organizer publishes it **Then** its status becomes published and it may appear in discovery.
+- **Given** a published event **When** an organizer unpublishes it **Then** its status becomes draft and it is absent from discovery results.
+- **Given** an invalid publication transition **When** the operation is requested **Then** it is rejected with `INVALID_STATE`.
+
+### S05: Discover published events
+
+- **Given** published events with title, city and venue values **When** an attendee searches using text with any letter case or surrounding whitespace **Then** events matching any of those fields are returned and drafts are excluded.
+- **Given** a city filter **When** it is applied **Then** only exact city matches remain, ignoring case and surrounding whitespace.
+- **Given** start and end dates **When** a date filter is applied **Then** matching UTC event instants include both boundaries; date-only end values include that entire UTC day.
+- **Given** a minimum or maximum price **When** price filtering is requested **Then** a currency is required, integer minor units are compared only within that currency, and both price bounds are inclusive.
+- **Given** an event with multiple tiers **When** a price filter is applied **Then** its price is the lowest currently available tier in the requested currency; an event without such a tier does not match.
+- **Given** `availableOnly: true` **When** discovery runs **Then** only events with a positive sum of current available quantities across their tiers are returned.
+- **Given** multiple search and filter criteria **When** combined in one request **Then** every supplied criterion is satisfied by each returned event and the source event snapshots remain unchanged.
+- **Given** a sort request **When** results are sorted by date, price or availability **Then** the custom stable merge sort is used; date defaults earliest first, price lowest first, availability highest first, and equal keys retain source order.
+- **Given** unsupported options, invalid dates, reversed ranges, invalid currencies, or invalid sort directions **When** discovery is requested **Then** it is rejected with `VALIDATION`.
+- **Given** Event Service or required Ticket Service data is unavailable **When** discovery is requested **Then** it returns a controlled dependency error and no partial or fabricated results.
+
+## Existing Acceptance Criteria
 
 ### S06: Book tickets
 

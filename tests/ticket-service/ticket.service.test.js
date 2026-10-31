@@ -51,3 +51,29 @@ test('rejected reservation and invalid release preserve capacity bounds', () => 
   assert.throws(() => tickets.releaseInventory(tier.id, 3), (error) => error.code === ERROR_CODES.INVALID_STATE);
   assert.equal(tickets.getAvailableQuantity(tier.id), 0);
 });
+
+test('batch tier reads group current snapshots by event and include events with no tiers', () => {
+  const { event, tickets } = createEventAndTicketServices();
+  const secondEvent = 'event_second';
+  const firstTier = tickets.createTicketTier({
+    eventId: event.id, name: 'General', priceMinor: 2500, currency: 'USD', capacity: 4,
+  });
+  const secondTier = tickets.createTicketTier({
+    eventId: event.id, name: 'Balcony', priceMinor: 5000, currency: 'USD', capacity: 2,
+  });
+  tickets.reserveInventory(firstTier.id, 3);
+
+  const result = tickets.getTicketTiersForEvents([event.id, secondEvent]);
+  assert.deepEqual(result.map((group) => group.eventId), [event.id, secondEvent]);
+  assert.deepEqual(result[0].ticketTiers.map((tier) => tier.name), ['General', 'Balcony']);
+  assert.deepEqual(result[0].ticketTiers.map((tier) => tier.availableQuantity), [1, 2]);
+  assert.deepEqual(result[1].ticketTiers, []);
+  assert.equal(Object.hasOwn(result[0].ticketTiers[0], 'reservedQuantity'), false);
+});
+
+test('batch tier reads reject malformed and duplicate event identifiers', () => {
+  const { tickets } = createEventAndTicketServices();
+  assert.throws(() => tickets.getTicketTiersForEvents('event_1'), (error) => error.code === ERROR_CODES.VALIDATION);
+  assert.throws(() => tickets.getTicketTiersForEvents(['event_one', 'event_one']),
+    (error) => error.code === ERROR_CODES.VALIDATION);
+});
