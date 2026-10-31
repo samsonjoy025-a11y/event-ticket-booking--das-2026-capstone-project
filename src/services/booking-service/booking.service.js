@@ -6,6 +6,7 @@ import { assertIdentifier } from '../../shared/validation/validate.js';
 import { MAX_ID_GENERATION_ATTEMPTS } from '../../shared/config/constants.js';
 import { createUniqueBookingReference } from './booking-reference.service.js';
 import { validateCreateBookingInput } from './booking.validation.js';
+import { BOOKING_STATES, resolveBookingTransition } from './booking-state-machine.js';
 
 function createUniqueBookingId(existingIds, idGenerator) {
   for (let attempt = 0; attempt < MAX_ID_GENERATION_ATTEMPTS; attempt += 1) {
@@ -76,7 +77,7 @@ export function createBookingService({
         attendeeId: bookingInput.attendeeId,
         quantity: bookingInput.quantity,
         total,
-        status: 'pending',
+        status: BOOKING_STATES.PENDING,
         createdAt: new Date().toISOString(),
       };
 
@@ -92,12 +93,10 @@ export function createBookingService({
 
     cancelBooking(reference) {
       const booking = getStoredBooking(reference);
-      if (booking.status !== 'pending') {
-        throw new AppError(ERROR_CODES.INVALID_STATE, 'Only pending bookings can be cancelled.');
-      }
+      const nextState = resolveBookingTransition(booking.status, 'cancel');
 
       tickets.releaseInventory(booking.ticketTierId, booking.quantity);
-      const cancelled = { ...booking, status: 'cancelled', cancelledAt: new Date().toISOString() };
+      const cancelled = { ...booking, status: nextState, cancelledAt: new Date().toISOString() };
       bookingsByReference.set(booking.reference, cancelled);
 
       return {

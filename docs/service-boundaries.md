@@ -45,3 +45,11 @@ Owns discovery input validation, text search over title/city/venue, city and dat
 Public interface: `discoverEvents(options)`. Options include `query`, `city`, `startDate`, `endDate`, `minPriceMinor`, `maxPriceMinor`, `currency`, `availableOnly`, `sortBy` (`date`, `price`, or `availability`), and `sortDirection` (`asc` or `desc`). It calls Event Service first, then calls Ticket Service once in batch only when price/availability criteria or sorting require ticket data. If a required dependency fails or returns inconsistent tier information, it returns `DEPENDENCY_UNAVAILABLE` rather than partial or fabricated results.
 
 Price comparison uses the lowest-priced currently available tier for the requested currency; no currency conversion is attempted. Availability is the sum of available quantities across all tiers. Date-only boundaries are interpreted in UTC, timestamps require an explicit offset, and both boundaries are inclusive. Stable sort ties retain the event service's source order. Search-only and event-date-only requests remain independent of ticket data.
+
+## Booking State Machine (Build 3)
+
+Booking Service owns lifecycle status and calls its internal transition guard before changing a booking. The currently enabled action is cancellation from `pending` to `cancelled`; the service releases inventory through Ticket Service exactly once before storing the transition. Callers cannot set an arbitrary status through the public Booking Service interface. Confirmation, refund, and expiry transitions are deferred to their roadmap builds.
+
+## HTTP and Static Serving (Build 3)
+
+The server router owns request dispatch only. The health controller creates a liveness payload; the static controller reads only supported files under `public/`. Neither controller reaches into domain-service Maps. Build 4 API controllers will call the application-composed public service interfaces; they must not reproduce business rules in routes. The current `/health` check is independent of Event, Ticket, Booking, Waitlist, and Discovery dependencies.

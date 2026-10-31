@@ -1,10 +1,16 @@
 # Event Ticketing Architecture
 
-Builds 1 and 2 run in a single Node.js process with independently owned domain modules and in-memory state. The structure establishes code ownership and explicit service contracts; it does not provide deployment or process-level microservice isolation.
+Builds 1, 2, and 3 run in a single Node.js process with independently owned domain modules and in-memory state. The structure establishes code ownership and explicit service contracts; it does not provide deployment or process-level microservice isolation.
 
 ```mermaid
 flowchart LR
-  Bootstrap[Application bootstrap] --> Events[Event service]
+  Client[Browser or client] --> Http[Native HTTP server]
+  Http --> Router[Router]
+  Router --> Health[Health controller]
+  Router --> Static[Static controller]
+  Static --> Public[public directory]
+  Router -. Build 4 API controllers .-> Bootstrap[Application bootstrap]
+  Bootstrap --> Events[Event service]
   Bootstrap --> Tickets[Ticket service]
   Bootstrap --> Bookings[Booking service]
   Bootstrap --> Waitlists[Waitlist service]
@@ -16,6 +22,8 @@ flowchart LR
   Discovery -->|published event snapshots| Events
   Discovery -->|batched current tier snapshots| Tickets
 ```
+
+The dotted Build 4 path is a planned extension, not an implemented REST API. Current HTTP handling serves `/health` and static files only.
 
 ## Runtime Flow
 
@@ -42,3 +50,15 @@ The Event Discovery Service owns query validation, text matching, filtering, res
 The service filters event fields before asking for ticket snapshots, avoiding unnecessary batch work. It validates that the batch result matches each event's associated tier IDs and returns no partial results when a required dependency is unavailable. Errors are normalized to `DEPENDENCY_UNAVAILABLE`; user validation remains `VALIDATION`.
 
 The application still executes all services in one process. A future independently deployed discovery service will need explicit network contracts, deadlines/timeouts, bounded retries where safe, circuit breaking, observability, and a policy for stale read models. None is introduced here.
+
+## Booking State Machine (Build 3)
+
+Booking Service owns each booking's status. Its transition guard is separate from HTTP routing. In this build, booking creation stores `pending`; the only enabled transition is `pending -> cancelled`, which releases the reserved inventory through Ticket Service before the new booking snapshot is stored. Invalid and unsupported transitions return `INVALID_STATE`.
+
+Confirmation, refunds, and expiry are intentionally not implemented: payment is assigned to Build 4, while refund and expiry behavior is assigned to Build 8. Waitlist membership remains owned by Waitlist Service and is not a booking status.
+
+## HTTP Foundation (Build 3)
+
+`src/application/server.js` loads configuration and starts the server. `src/server/` owns HTTP routing, health response formatting, and static-file access; it does not import or mutate domain-service storage. `GET /health` is a liveness signal only. It does not verify dependencies or readiness. Future REST controllers can be added to the router and composed with `createApplication()` without moving business rules into HTTP handlers.
+
+Static files are resolved under the configured `public/` root. Only allowlisted file types are served; path traversal and symlinks escaping the root are rejected, directories are not listed, and absent files return `NOT_FOUND`. The public directory contains only a repository marker until a later frontend build.
