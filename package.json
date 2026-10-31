@@ -1,0 +1,14 @@
+{
+  "name": "event-ticketing-platform",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "test": "node --test",
+    "demo": "node demo/demo.js",
+    "benchmark": "node benchmark/booking-lookup.benchmark.js"
+  }
+}

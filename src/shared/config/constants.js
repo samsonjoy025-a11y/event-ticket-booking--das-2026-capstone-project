@@ -1,0 +1,3 @@
+export const MAX_BOOKING_QUANTITY = 10;
+export const MAX_ID_GENERATION_ATTEMPTS = 5;
+export const MAX_BOOKING_REFERENCE_ATTEMPTS = 5;
