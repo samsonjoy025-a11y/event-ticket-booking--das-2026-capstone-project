@@ -35,3 +35,11 @@ Discovery accepts only an allowlist of query options and validates strings, UTC 
 Price comparisons always include a validated currency and never convert or compare different currencies. Ticket Service errors and malformed batch responses become a sanitized `DEPENDENCY_UNAVAILABLE` error. A ticket-dependent query returns no partial results and does not substitute zero for missing prices or availability. Event-only searches do not call Ticket Service. No attendee identity is needed or logged by discovery; authentication and authorization remain out of scope.
 
 Dates are compared as UTC instants. Date-only boundaries mean midnight UTC for the start and the last millisecond of that UTC day for the end; timestamp inputs require an explicit timezone offset. Locale-specific display formatting belongs to a future presentation layer.
+
+## Build 3 HTTP Controls
+
+The server uses Node's built-in HTTP and filesystem modules. Only `GET` is accepted; unsupported methods receive `405` with `Allow: GET`. Health responses contain only service status, a fixed service label, and a timestamp. Unknown routes and file errors return stable JSON messages without filesystem paths or stack traces. Basic headers include `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and `Referrer-Policy: no-referrer`.
+
+Static serving resolves a single configured public root, rejects malformed/encoded traversal, backslashes, NULs, and dot-prefixed path segments, verifies the final real path remains inside that root (including symlink resolution), does not list directories, and serves only an extension allowlist. No source tree or environment files are under the static root. `public/` currently contains only a repository marker, not frontend assets. The health route is liveness only; it exposes no dependency details and is not a readiness check.
+
+The server has no authentication, authorization, TLS termination, rate limiting, request-body processing, or production reverse-proxy configuration. It binds to loopback by default. Those limitations must be revisited before exposing the service publicly; authentication/authorization is reserved for Build 7 and broader HTTP hardening remains later roadmap work.

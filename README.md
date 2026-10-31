@@ -101,3 +101,22 @@ app.discovery.discoverEvents({
 Price boundaries are inclusive. Price filters require a currency and compare only tiers in that currency; the event price is its lowest-priced tier with current availability. Availability is the sum of current available quantities across all tiers, regardless of currency. Date-only end boundaries include the full UTC day; timestamps must include an explicit timezone. Unavailable price data sorts after known prices, never as zero. See [docs/algorithm-analysis.md](docs/algorithm-analysis.md) for complexity and benchmark details.
 
 `npm run benchmark` runs both the Build 1 booking lookup benchmark and the Build 2 discovery benchmark. Results are measurements for the current runtime and are not proof of Big O complexity.
+
+## Build 3: Architecture and Server Foundation
+
+The current milestone adds a centralized booking transition guard and a native Node.js HTTP server with a basic liveness endpoint and confined static-file serving. It is not the REST API milestone; `/health` is the only application endpoint, and the `public/` directory intentionally contains no frontend yet.
+
+Requirements: Node.js 22.13 or newer.
+
+```sh
+npm start
+npm test
+```
+
+The server listens on `http://127.0.0.1:3000` by default. `HOST` and `PORT` can be set for local configuration. Check liveness with:
+
+```sh
+curl http://127.0.0.1:3000/health
+```
+
+The current booking lifecycle supports `pending` and `cancelled`; only pending bookings can be cancelled, and cancellation releases inventory once. Confirmation/payment, refunds, and expiry are reserved for later builds. See [docs/booking-state-machine.md](docs/booking-state-machine.md) for the transition table and deferred states.
